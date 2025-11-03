@@ -112,82 +112,82 @@ def embed_metadata(out_file: str, song_detail: dict, cover_path: Optional[str]):
     if not song_detail:
         return
 
-    # try:
-    _, ext = os.path.splitext(out_file)
-    ext = ext.lower()
+    try:
+        _, ext = os.path.splitext(out_file)
+        ext = ext.lower()
 
-    title = song_detail.get('name', '')
-    artists = [artist['name'] for artist in song_detail.get('artists', [])]
-    artist_str = ', '.join(artists) if artists else ''
-    album = song_detail.get('album', {}).get('name', '')
-    no = str(song_detail.get('no', '1'))
-    track_number = f"{song_detail.get('no', '1')}/{song_detail.get('album', {}).get('size', '1')}"
-    duration_ms = song_detail.get('duration', 0)
+        title = song_detail.get('name', '')
+        artists = [artist['name'] for artist in song_detail.get('artists', [])]
+        artist_str = ', '.join(artists) if artists else ''
+        album = song_detail.get('album', {}).get('name', '')
+        no = str(song_detail.get('no', '1'))
+        track_number = f"{song_detail.get('no', '1')}/{song_detail.get('album', {}).get('size', '1')}"
+        duration_ms = song_detail.get('duration', 0)
 
-    if ext == '.mp3':
-        # Load existing tags or create new ones
-        try:
-            audio_file = MP3(out_file, ID3=ID3)
-        except mutagen.MutagenError:
+        if ext == '.mp3':
+            # Load existing tags or create new ones
             try:
-                audio_file = MP3(out_file)  # Might fail if no ID3 header (MPEG-MP3)
-                audio_file.add_tags()
-            except Exception as e:
-                print(f"[Info] Skip embedding metadata for MPEG-MP3 file: {out_file} ({e.args})")
-                return
+                audio_file = MP3(out_file, ID3=ID3)
+            except mutagen.MutagenError:
+                try:
+                    audio_file = MP3(out_file)  # Might fail if no ID3 header (MPEG-MP3)
+                    audio_file.add_tags()
+                except Exception as e:
+                    print(f"[Info] Skip embedding metadata for MPEG-MP3 file: {out_file} ({e.args})")
+                    return
 
-        # Set ID3 tags
-        audio_file.tags.add(TIT2(encoding=3, text=title))
-        audio_file.tags.add(TPE1(encoding=3, text=artist_str))
-        audio_file.tags.add(TALB(encoding=3, text=album))
-        if track_number:
-            audio_file.tags.add(TRCK(encoding=3, text=track_number))
-        if duration_ms:
-            audio_file.tags.add(TLEN(encoding=3, text=str(duration_ms)))
+            # Set ID3 tags
+            audio_file.tags.add(TIT2(encoding=3, text=title))
+            audio_file.tags.add(TPE1(encoding=3, text=artist_str))
+            audio_file.tags.add(TALB(encoding=3, text=album))
+            if track_number:
+                audio_file.tags.add(TRCK(encoding=3, text=track_number))
+            if duration_ms:
+                audio_file.tags.add(TLEN(encoding=3, text=str(duration_ms)))
 
-        # Add cover art
-        if cover_path and os.path.exists(cover_path):
-            with open(cover_path, 'rb') as img_file:
-                audio_file.tags.add(
-                    APIC(
-                        encoding=3,  # UTF-8
-                        mime='image/jpeg',
-                        type=3,  # Cover (front)
-                        desc='Cover',
-                        data=img_file.read()
+            # Add cover art
+            if cover_path and os.path.exists(cover_path):
+                with open(cover_path, 'rb') as img_file:
+                    audio_file.tags.add(
+                        APIC(
+                            encoding=3,  # UTF-8
+                            mime='image/jpeg',
+                            type=3,  # Cover (front)
+                            desc='Cover',
+                            data=img_file.read()
+                        )
                     )
-                )
-        audio_file.save()
-        print(f"[Info] Embedded MP3 metadata for: {out_file}")
+            audio_file.save()
+            print(f"[Info] Embedded MP3 metadata for: {out_file}")
 
-    elif ext == '.flac':
-        audio_file = FLAC(out_file)
+        elif ext == '.flac':
+            audio_file = FLAC(out_file)
 
-        # Set Vorbis Comments
-        audio_file['TITLE'] = title
-        audio_file['ARTIST'] = artist_str
-        audio_file['ALBUM'] = album
-        if track_number:
-            audio_file['TRACKNUMBER'] = no
+            # Set Vorbis Comments
+            audio_file['TITLE'] = title
+            audio_file['ARTIST'] = artist_str
+            audio_file['ALBUM'] = album
+            if track_number:
+                audio_file['TRACKNUMBER'] = no
 
-        # Add cover art
-        if cover_path and os.path.exists(cover_path):
-            with open(cover_path, 'rb') as img_file:
-                picture = Picture()
-                picture.type = 3  # Cover (front)
-                picture.desc = 'Cover'
-                picture.mime = 'image/jpeg'
-                picture.data = img_file.read()
-                audio_file.add_picture(picture)
+            # Add cover art
+            if cover_path and os.path.exists(cover_path):
+                with open(cover_path, 'rb') as img_file:
+                    picture = Picture()
+                    picture.type = 3  # Cover (front)
+                    picture.desc = 'Cover'
+                    picture.mime = 'image/jpeg'
+                    picture.data = img_file.read()
+                    audio_file.add_picture(picture)
 
-        audio_file.save()
-        print(f"[Info] Embedded FLAC metadata for: {out_file}")
+            audio_file.save()
+            print(f"[Info] Embedded FLAC metadata for: {out_file}")
 
-    else:
-        print(f"[Info] Metadata embedding not implemented for format: {ext}")
-    #
-    # except Exception as e:
-    #     p(f"[Error] Failed to embed metadata into {out_file}: {e}")
+        else:
+            print(f"[Info] Metadata embedding not implemented for format: {ext}")
+
+    except Exception as e:
+        p(f"[Error] Failed to embed metadata into {out_file}: {e}")
 
 
 def convert_uc(src: str, dest: str):
